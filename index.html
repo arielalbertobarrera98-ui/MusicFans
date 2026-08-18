@@ -1,0 +1,278 @@
+<!doctype html>< lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#08080b"><title>MusicFans</title>
+  <link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#08080b;color:#f7f7fa;font-family:Arial,sans-serif}.app{max-width:520px;margin:auto;min-height:100vh;padding-bottom:90px}
+header{padding:20px 17px;display:flex;align-items:center;gap:12px}.logo{font-size:24px;font-weight:800}.logo span{color:#c56cff}.spacer{flex:1}button{cursor:pointer}.top{background:none;border:0;color:#ddd;font-size:24px}
+.search{margin:0 17px 20px;background:#191a20;border:1px solid #292a33;border-radius:16px;padding:13px;display:flex;gap:8px}.search input{flex:1;background:none;border:0;outline:0;color:white;font-size:15px}.search button{background:none;border:0;color:#ccc;font-size:20px}
+.page{padding:0 17px}.page h1{font-size:26px}.card,.list{background:#15161b;border:1px solid #292a32;border-radius:14px;padding:15px}.list{padding:0;overflow:hidden}.row{display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid #292a32}.row:last-child{border:0}.thumb{width:80px;height:55px;border-radius:8px;object-fit:cover;background:#29202f}.main{flex:1;min-width:0}.main b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.main small{display:block;color:#999aa5;margin-top:4px}.play{background:#9b4dff;color:#fff;border:0;border-radius:50%;width:38px;height:38px}.muted{color:#999aa5}.empty{text-align:center;color:#999;padding:40px}.player{position:fixed;bottom:61px;left:50%;transform:translateX(-50%);width:min(520px,100%);background:#17181d;border-top:1px solid #292a32;padding:10px 14px;display:none;align-items:center;gap:10px}.player.show{display:flex}.mini{width:44px;height:44px;border-radius:8px;background:#40205d;display:grid;place-items:center}.minit{flex:1;min-width:0}.minit b,.minit span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.minit span{font-size:12px;color:#999aa5}nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);height:62px;background:#0f1014;border-top:1px solid #292a32;display:flex;justify-content:space-around}nav button{border:0;background:none;color:#999;font-size:11px}nav .active{color:#c56cff}
+</style></head><body>
+<div class="app">
+<header><button class="top">☰</button><div class="logo">♫ Music<span>Fans</span></div><div class="spacer"></div><button class="top">♧</button></header>
+<div class="search"><span>⌕</span><input id="q" placeholder="Buscar canciones, artistas, álbumes o videos..." onkeydown="if(event.key==='Enter')search()"><button onclick="search()">⌕</button></div>
+<main class="page"><h1>Explorar</h1><div id="status" class="card"><b>Catálogo de YouTube</b><p class="muted">Escribe una canción o artista para buscar.</p></div><div id="results"></div></main>
+</div>
+<div id="player" class="player"><div class="mini">♫</div><div class="minit"><b id="nt">Sin canción</b><span id="na"></span></div><button class="play" onclick="openCurrent()">▶</button></div>
+<nav>
+  <button class="active" onclick="showPage('home',this)">⌂<br>Inicio</button>
+  <button onclick="showPage('explore',this);document.getElementById('q').focus()">⌕<br>Explorar</button>
+  <button onclick="showPage('favorites',this)">♡<br>Favoritos</button>
+  <button onclick="showPage('offline',this)">⇩<br>Offline</button>
+  <button onclick="showPage('library',this)">♫<br>Biblioteca</button>
+</nav>
+
+<script>
+const YOUTUBE_API_KEY="";
+
+let currentVideo="";
+let favorites=JSON.parse(localStorage.getItem("musicfans_favorites")||"[]");
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g,m=>({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    "\"":"&quot;",
+    "'":"&#039;"
+  }[m]));
+}
+
+function showPage(page,button){
+  document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+  if(button) button.classList.add("active");
+
+  const title=document.querySelector(".page h1");
+  const status=document.getElementById("status");
+  const results=document.getElementById("results");
+
+  if(page==="home"){
+    title.textContent="Explorar";
+    status.innerHTML='<b>Catálogo de YouTube</b><p class="muted">Escribe una canción o artista para buscar.</p>';
+    results.innerHTML="";
+  }
+
+  if(page==="explore"){
+    title.textContent="Explorar";
+    status.innerHTML='<b>Buscar música</b><p class="muted">Busca canciones, artistas, álbumes o videos.</p>';
+    results.innerHTML="";
+  }
+
+  if(page==="favorites"){
+    title.textContent="Favoritos";
+    status.innerHTML='<b>Mis canciones favoritas</b><p class="muted">Aquí aparecerán las canciones que guardes.</p>';
+    showFavorites();
+  }
+
+  if(page==="offline"){
+    title.textContent="Offline";
+    status.innerHTML='<b>Contenido guardado</b><p class="muted">Próximamente podrás administrar tu contenido sin conexión.</p>';
+    results.innerHTML="";
+  }
+
+  if(page==="library"){
+    title.textContent="Biblioteca";
+    status.innerHTML='<b>Mi biblioteca</b><p class="muted">Tu música guardada aparecerá aquí.</p>';
+    showFavorites();
+  }
+}
+
+async function search(){
+  const q=document.getElementById("q").value.trim();
+  const r=document.getElementById("results");
+
+  if(!q)return;
+
+  if(YOUTUBE_API_KEY==="TU_CLAVE_DE_YOUTUBE"){
+    r.innerHTML='<div class="card"><b>Falta la API Key</b><p class="muted">Coloca tu clave de YouTube en el código.</p></div>';
+    return;
+  }
+
+  r.innerHTML='<div class="card">🔎 Buscando en YouTube...</div>';
+
+  try{
+    const u=
+      "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&q="+
+      encodeURIComponent(q)+
+      "&key="+
+      encodeURIComponent(YOUTUBE_API_KEY);
+
+    const res=await fetch(u);
+    const data=await res.json();
+
+    if(!res.ok){
+      throw new Error(data?.error?.message||"Error de YouTube");
+    }
+
+    if(!data.items?.length){
+      r.innerHTML='<div class="empty">No encontramos resultados.</div>';
+      return;
+    }
+
+    r.innerHTML='<div class="list">'+
+      data.items.map(x=>{
+        const id=x.id.videoId;
+        const t=x.snippet.title;
+        const a=x.snippet.channelTitle;
+        const img=
+          x.snippet.thumbnails?.medium?.url||
+          x.snippet.thumbnails?.default?.url;
+
+        const isFav=favorites.some(f=>f.id===id);
+
+        return `
+          <div class="row">
+            <img class="thumb" src="${img}" alt="">
+            <div class="main">
+              <b>${esc(t)}</b>
+              <small>${esc(a)}</small>
+            </div>
+
+            <button class="play"
+              onclick='selectVideo(${JSON.stringify(id)},${JSON.stringify(t)},${JSON.stringify(a)})'>
+              ▶
+            </button>
+
+            <button
+              style="background:none;border:0;color:#c56cff;font-size:22px"
+              onclick='toggleFavorite(${JSON.stringify(id)},${JSON.stringify(t)},${JSON.stringify(a)},${JSON.stringify(img)})'>
+              ${isFav?"♥":"♡"}
+            </button>
+          </div>
+        `;
+      }).join("")+
+    '</div>';
+
+  }catch(e){
+    r.innerHTML=
+      '<div class="card"><b>Error</b><p class="muted">'+
+      esc(e.message)+
+      '</p></div>';
+  }
+}
+
+function selectVideo(id,t,a){
+  currentVideo=id;
+
+  const nt=document.getElementById("nt");
+  const na=document.getElementById("na");
+  const player=document.getElementById("player");
+
+  if(nt)nt.textContent=t;
+  if(na)na.textContent=a;
+  if(player)player.classList.add("show");
+
+  openCurrent();
+}
+
+function openCurrent(){
+  if(!currentVideo)return;
+
+  const player=document.getElementById("player");
+
+  if(!player)return;
+
+  player.classList.add("show");
+
+  let iframe=document.getElementById("youtubePlayer");
+
+  if(!iframe){
+    iframe=document.createElement("iframe");
+    iframe.id="youtubePlayer";
+    iframe.width="100%";
+    iframe.height="180";
+    iframe.style.border="0";
+    iframe.style.borderRadius="12px";
+    iframe.setAttribute("allow","autoplay; encrypted-media; picture-in-picture");
+    iframe.setAttribute("allowfullscreen","");
+
+    player.innerHTML="";
+    player.appendChild(iframe);
+  }
+
+  iframe.src="https://www.youtube.com/embed/"+
+    encodeURIComponent(currentVideo)+
+    "?autoplay=1&rel=0";
+}
+
+function toggleFavorite(id,t,a,img){
+  const index=favorites.findIndex(f=>f.id===id);
+
+  if(index>=0){
+    favorites.splice(index,1);
+  }else{
+    favorites.push({
+      id:id,
+      title:t,
+      artist:a,
+      image:img
+    });
+  }
+
+  localStorage.setItem(
+    "musicfans_favorites",
+    JSON.stringify(favorites)
+  );
+
+  search();
+}
+
+function showFavorites(){
+  const r=document.getElementById("results");
+
+  if(!favorites.length){
+    r.innerHTML=
+      '<div class="empty">♡<br><br>Aún no tienes canciones favoritas.</div>';
+    return;
+  }
+
+  r.innerHTML='<div class="list">'+
+    favorites.map(f=>`
+      <div class="row">
+        <img class="thumb" src="${f.image}" alt="">
+        <div class="main">
+          <b>${esc(f.title)}</b>
+          <small>${esc(f.artist)}</small>
+        </div>
+
+        <button class="play"
+          onclick='selectVideo(${JSON.stringify(f.id)},${JSON.stringify(f.title)},${JSON.stringify(f.artist)})'>
+          ▶
+        </button>
+
+        <button
+          style="background:none;border:0;color:#ff6c9c;font-size:22px"
+          onclick='removeFavorite(${JSON.stringify(f.id)})'>
+          ♥
+        </button>
+      </div>
+    `).join("")+
+  '</div>';
+}
+
+function removeFavorite(id){
+  favorites=favorites.filter(f=>f.id!==id);
+
+  localStorage.setItem(
+    "musicfans_favorites",
+    JSON.stringify(favorites)
+  );
+
+  showFavorites();
+}
+    </script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js")
+      .then(() => console.log("MusicFans: Service Worker activo"))
+      .catch(error => console.error("MusicFans: error Service Worker", error));
+  });
+}
+</script>
+
+</body>
+</html>

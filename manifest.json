@@ -1,0 +1,22 @@
+{
+  "name": "MusicFans",
+  "short_name": "MusicFans",
+  "description": "Reproductor de música y comunidad para fans de la música.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#08080b",
+  "theme_color": "#08080b",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
