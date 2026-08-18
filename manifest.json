@@ -1,6 +1,7 @@
 {
   "name": "MusicFans",
   "short_name": "MusicFans",
+  "id": "/MusicFans/",
   "description": "Reproductor de música y comunidad para fans de la música.",
   "start_url": "./index.html",
   "scope": "./",
