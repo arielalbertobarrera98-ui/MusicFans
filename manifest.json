@@ -3,6 +3,7 @@
   "short_name": "MusicFans",
   "id": "/MusicFans/",
   "description": "Reproductor de música y comunidad para fans de la música.",
+  "categories": ["music", "entertainment"],
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
