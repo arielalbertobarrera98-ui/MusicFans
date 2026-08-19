@@ -4,6 +4,26 @@
   "id": "/MusicFans/",
   "description": "Reproductor de música y comunidad para fans de la música.",
   "categories": ["music", "entertainment"],
+  "screenshots": [
+  {
+    "src": "./screenshot-home.jpg",
+    "sizes": "782x1536",
+    "type": "image/jpeg",
+    "form_factor": "narrow"
+  },
+  {
+    "src": "./screenshot-favorites.jpg",
+    "sizes": "781x1536",
+    "type": "image/jpeg",
+    "form_factor": "narrow"
+  },
+  {
+    "src": "./screenshot-offline.jpg",
+    "sizes": "786x1536",
+    "type": "image/jpeg",
+    "form_factor": "narrow"
+  }
+],
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
